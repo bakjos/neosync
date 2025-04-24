@@ -285,13 +285,22 @@ func (r *redisProc) execRaw(
 	}
 	args = append([]any{command}, args...)
 
+	r.log.Debugf("executing redis command: %v", args)
+
 	res, err := r.client.Do(ctx, args...).Result()
 	for i := 0; i <= r.retries && err != nil; i++ {
 		r.log.Errorf("%v command failed: %v", command, err)
 		<-time.After(r.retryPeriod)
 		res, err = r.client.Do(ctx, args...).Result()
 	}
+
 	if err != nil {
+		if err.Error() == "redis: nil" {
+			// If the result is nil, we set the message to nil
+			r.log.Debugf("redis command returned nil %v", args)
+			msg.SetStructuredMut(nil)
+			return nil
+		}
 		return err
 	}
 
@@ -338,6 +347,7 @@ func (r *redisProc) ProcessBatch(ctx context.Context, inBatch service.MessageBat
 	for index, part := range newMsg {
 		if err := r.execRaw(ctx, index, argsExec, commandExec, part); err != nil {
 			r.log.Debugf("Args mapping failed: %v", err)
+
 			part.SetError(err)
 		}
 	}
