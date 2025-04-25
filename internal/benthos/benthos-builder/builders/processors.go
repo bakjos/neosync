@@ -91,6 +91,10 @@ func buildSqlUpdateProcessorConfigs(
 			)
 			argsMapping := fmt.Sprintf(`root = [%q, json(%q)]`, hashedKey, fkCol)
 			resultMap := fmt.Sprintf("root.%q = this", fkCol)
+
+			fmt.Printf("[Redis] Circular dependency for foreign key, jobid = %s, runId = %s, table = %s, column = %s, hash = %s\n",
+				jobId, runId, pk.Table, pk.Column, hashedKey)
+
 			fkBranch := buildRedisGetBranchConfig(
 				resultMap,
 				argsMapping,
@@ -110,6 +114,10 @@ func buildSqlUpdateProcessorConfigs(
 			pkRequestMap := fmt.Sprintf(`root = if this.%q == null { deleted() } else { this }`, pk)
 			pkArgsMapping := fmt.Sprintf(`root = [%q, json(%q)]`, hashedKey, pk)
 			pkResultMap := fmt.Sprintf("root.%q = this", pk)
+
+			fmt.Printf("[Redis] Primary key, jobid = %s, runId = %s, table = %s, column = %s, hash = %s\n",
+				jobId, runId, config.Table(), pk, hashedKey)
+
 			pkBranch := buildRedisGetBranchConfig(
 				pkResultMap,
 				pkArgsMapping,
@@ -449,6 +457,8 @@ func buildBranchCacheConfigs(
 				)
 				argsMapping := fmt.Sprintf(`root = [%q, json(%q)]`, hashedKey, col.Column)
 				resultMap := fmt.Sprintf("root.%q = this", col.Column)
+				fmt.Printf("[Redis] Foreing key, jobid = %s, runId = %s, table = %s, column = %s, hash = %s\n",
+					jobId, runId, fk.Table, fk.Column, hashedKey)
 				br := buildRedisGetBranchConfig(
 					resultMap,
 					argsMapping,
